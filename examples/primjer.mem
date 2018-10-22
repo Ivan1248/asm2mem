@@ -1,0 +1,25 @@
+// LOAD R1, 44
+000: 000101 01
+001: 44
+// LOAD_IMMEDIATE R0, 3
+002: 000001 00
+003: 3
+// NOP
+004: 000000 00
+005: 00 00 0000
+// add r0, r0, r1  # mogu se koristiti i mala slova
+006: 000010 00
+007: 00 01 0000
+
+// "rucno" definirana instrukcija HALT
+008: 000011 00
+009: 0
+
+// 44.  # podaci koji slijede pocinju od adrese 44
+044: 53
+045: 00100110
+// JZ R1, R2
+046: 001000 00
+047: 01 10 0000
+048: -12  // ovo je na adresi 48
+
