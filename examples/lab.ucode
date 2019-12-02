@@ -12,47 +12,62 @@ fetch5: a_sel=7, c_in, alu_sel=ADDA, r7_write, goto opcode[IR_OPCODE]; // PC <- 
 //// DIO OPERACIJSKIH KODOVA
 // NOP  // 0 0 (8 8)
 opcode[0]: goto fetch0;
+
 // LOAD_IMMEDIATE ri, ir_const8 // ri <- ir_const8  // 1 ri ir_const8 (628)
 opcode[1]: result_sel=IR_CONST8, ri_sel, goto fetch0;
+
 // ADD ri, rj, rk // ri <- rj + rk // 2 ri rj rk 0 (62224)
-opcode[2]: ri_sel, rj_sel, rk_sel, alu_sel=ADD, 
-		if m_7 then goto opcode2.1 else goto opcode2.2 endif;
+opcode[2]: ri_sel, rj_sel, rk_sel, alu_sel=ADD, if m_7 then goto opcode2.1 else goto opcode2.2 endif;
+
 // HALT  // 3 0 (6 10)
 opcode[3]: goto opcode[3];
 
 //// OSTALI OPERACIJSKI KODOVI
 // MOVE ri, rj // ri <- rj  // 4 ri rj rj 0 (62224)
 opcode[4]: ri_sel, rj_sel, alu_sel=ADDA, goto fetch0;
+
 // LOAD ri, addr // ri <- MEM(addr) // 5 ri addr (628)
 opcode[5]: result_sel=IR_CONST8, r4_write, goto opcode5.1;  // r4 <- IR_CONST8
+
 // STORE R{rj}, (R{rk})  # MEM(rk) <- rj
 opcode[6]: rj_sel, alu_sel=ADDA, mdr_sel=LOAD_ALU, goto opcode6.1;  // MDR <- rj
+
 // JMP addr
 opcode[7]: result_sel=IR_CONST8, r7_write, goto fetch0;  // PC <- IR_CONST8
+
 // JZ rj, rk  // PC <- rk ako rj=0
 opcode[8]: rj_sel, alu_sel=NOT, r4_write, goto opcode8.1; 
+
 // SUB ri, rj, rk
-opcode[9]: ri_sel, rj_sel, rk_sel, c_in, alu_sel=SUB, 
-		if m_7 then goto opcode2.1 else goto opcode2.2 endif;
+opcode[9]: ri_sel, rj_sel, rk_sel, c_in, alu_sel=SUB, if m_7 then goto opcode2.1 else goto opcode2.2 endif;
+		
 // SHL ri, rj
 opcode[10]: rj_sel, alu_sel=ADDA, r4_write, goto opcode10;  // r4 <- rj
+
 // LDSP konst
 opcode[11]: result_sel=ir_const8, r5_write, goto fetch0;  // SP <- konst
+
 // PUSH rj
 opcode[12]: a_sel=5, alu_sel=ADDA, mar_sel=LOAD, goto opcode12.1;  // MAR <- SP
+
 // POP ri
-opcode[13]: a_sel=5, c_in, alu_sel=ADDA, r5_write, mar_sel=LOAD, 
-		goto opcode13.1;  // {SP, MAR} <- SP+1
+opcode[13]: a_sel=5, c_in, alu_sel=ADDA, r5_write, mar_sel=LOAD, goto opcode13.1;  // {SP, MAR} <- SP+1
+
 // CALL addr
 opcode[14]: a_sel=5, alu_sel=ADDA, mar_sel=LOAD, goto opcode14.1;  // MAR <- SP
+
 // RET
-opcode[15]: a_sel=5, c_in, alu_sel=ADDA, r5_write, mar_sel=LOAD,  // {SP, MAR} <- SP + 1
-		goto opcode15.1;
+opcode[15]: a_sel=5, c_in, alu_sel=ADDA, r5_write, mar_sel=LOAD, goto opcode15.1; // {SP, MAR} <- SP + 1
+
+// EQ ri, rj, rk
+opcode[16]: a_sel=4, b_sel=4, alu_sel=XOR, ri_sel, goto opcode16.1;
+
 
 //// DIO EKSTENZIJE
 // postavi zastavicu N
 opcode2.1: a_sel=4, b_sel=4, alu_sel=XOR, r4_write; // pomocni registar r4 <- 0
 	a_sel=4, c_in, alu_sel=ADDA, r6_write, goto fetch0; // r4=0 + c_in=1 -> r6 (SR)
+
 // obrisi zastavicu N
 opcode2.2: a_sel=4, b_sel=4; alu_sel=XOR, r4_write; // pomocni registar r4 <- 0
 	a_sel=4, alu_sel=ADDA, r6_write, goto fetch0; // r4=0 -> r6 (SR)
@@ -62,26 +77,32 @@ opcode2.2: a_sel=4, b_sel=4; alu_sel=XOR, r4_write; // pomocni registar r4 <- 0
 opcode5.1: a_sel=4, alu_sel=ADDA, mar_sel=LOAD;  // MAR <- r4
 opcode5.2: mdr_sel=LOAD_MEM, read, if wait then goto opcode5.2 endif;  // MDR <- MEM(MAR)
 	result_sel=MDR, ri_sel, goto fetch0;  // ri <- MDR
+
 // MEM(MAR) <- rj
 opcode6.1: a_sel=4, b_sel=4, alu_sel=XOR, r4_write;  // r4 <- 0  
 	a_sel=4, rk_sel, alu_sel=OR, mar_sel=LOAD;  // MAR <- (r4=0) + rk
 opcode6.2: write, if wait then goto opcode6.2 else goto fetch0 endif;  // MEM(MAR) <- MDR
+
 // JZ rj, rk  // PC <- rk ako rj=0
 opcode8.1: a_sel=4, c_in, alu_sel=ADDA,  // c_out <- [[rj!=0]]  rj=0 => JMP rk
 		if c_out then goto opcode8.2 else goto fetch0 endif;  
 opcode8.2: rj_sel, rk_sel, alu_sel=ADD, r7_write, goto fetch0;  // PC <- (rj=0) + rk 
+
 // SHL ri, rj
 opcode10: rj_sel, b_sel=4, alu_sel=ADD, ri_sel,  // ri <- (r4=rj) + rj
 		if m_7 then goto opcode2.1 else goto opcode2.2 endif;
+
 // PUSH rj
 opcode12.1: rj_sel, alu_sel=ADDA, mdr_sel=LOAD_ALU;  // MDR <- rj
 opcode12.2: write, if wait then goto opcode12.2 endif;  // MEM(MAR) <- MDR
 opcode12.3: a_sel=5, alu_sel=SUBA, r5_write, goto fetch0;  // SP <- SP - 1
+
 // POP ri
 //opcode13.1: r5_sel, c_in, alu_sel=ADDA, mdr_sel=LOAD_ALU;  // MDR <- rj
 opcode13.1: read, mdr_sel=LOAD_MEM, if wait then goto opcode13.1 endif;  // MEM(MAR) <- MDR
 opcode13.2: result_sel=MDR, ri_sel;  // ri <- MDR
 	a_sel=5, c_in, alu_sel=SUBA, r5_write, goto fetch0;  // SP <- SP - 1
+
 // CALL addr
 opcode14.1: a_sel=6, alu_sel=ADDA, mdr_sel=LOAD_ALU;  // MDR <- SR
 opcode14.2: write, if wait then goto opcode14.2 endif;  // MEM(MAR) <- MDR
@@ -90,9 +111,17 @@ opcode14.2: write, if wait then goto opcode14.2 endif;  // MEM(MAR) <- MDR
 opcode14.3: write, if wait then goto opcode14.3 endif;  // MEM(MAR) <- MDR
 	a_sel=5, alu_sel=SUBA, r5_write;  // SP <- SP - 1
 	result_sel=ir_const8, r7_write, goto fetch0;  // PC <- IR_CONST8
+
 // RET
 opcode15.1: read, mdr_sel=LOAD_MEM, if wait then goto opcode15.1 endif;  // MDR <- MEM(MAR)
 	result_sel=MDR, r7_write;  // PC <- MDR
 	a_sel=5, c_in, alu_sel=ADDA, r5_write, mar_sel=LOAD;  // {SP, MAR} <- SP + 1
 opcode15.2: read, mdr_sel=LOAD_MEM, if wait then goto opcode15.2 endif;  // MDR <- MEM(MAR)
 	result_sel=MDR, r6_write, goto fetch0;  // SR <- MDR
+
+// EQ ri, rj, rk
+opcode16.1: rj_sel, rk_sel, alu_sel=SUB, c_in, r4_write, if m_7 then goto fetch0 endif;
+	a_sel=4, alu_sel=SUBA, r4_write, if m_7 then goto opcode16.3 else goto fetch0 endif;
+opcode16.3: a_sel=4, b_sel=4, alu_sel=XOR, r4_write;
+	a_sel=4, alu_sel=ADDA, c_in, ri_sel, goto fetch0;
+
