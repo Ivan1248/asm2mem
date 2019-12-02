@@ -46,6 +46,9 @@ def get_instruction_regex(tokens: Iterable[str]):
     format_expr = r'\s+'.join(map(escape, tokens))
     split_expr = re.split(r'{([^}]+)}', format_expr)  # split on '{' and '}'
     var_names = split_expr[1::2]  # extract captured variable names
+    for v in var_names:     
+        if v not in variables:
+            raise RuntimeError(f"{v} is undefined. It should be one of {variables}")
     assert all(v in variables for v in var_names)
     signs = ['' if x.startswith('r') else '-?' for x in var_names]
     split_expr[1::2] = [f'(?P<{x}>{s}\\d+)' for x, s in zip(var_names, signs)]
@@ -53,7 +56,6 @@ def get_instruction_regex(tokens: Iterable[str]):
 
 
 class InstructionMatcher:
-
     def __init__(self, opcode: int, tokens: Sequence[str]):
         self.opcode, self.name = opcode, tokens[0].upper()
         self.template = ' '.join(tokens)
@@ -103,7 +105,6 @@ def get_instruction_code(opcode: int,
 
 
 class MemoryLocationProvider:
-
     def __init__(self):
         self.idx, self.populated = -1, set()
 
@@ -119,7 +120,6 @@ class MemoryLocationProvider:
 
 
 class Translator:
-
     def __init__(self, instruction_matchers: List[InstructionMatcher]):
         self._matchers = instruction_matchers
 
